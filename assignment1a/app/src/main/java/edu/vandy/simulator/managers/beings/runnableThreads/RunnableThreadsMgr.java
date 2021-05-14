@@ -1,10 +1,9 @@
 package edu.vandy.simulator.managers.beings.runnableThreads;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import edu.vandy.simulator.managers.beings.BeingManager;
-
-import static java.util.stream.Collectors.toList;
 
 /**
  * This BeingManager implementation manually creates a pool of Java
@@ -33,7 +32,7 @@ public class RunnableThreadsMgr
     public SimpleBeingRunnable newBeing() {
         // Return a new SimpleBeingRunnable instance.
         // TODO -- you fill in here replacing this statement with your solution.
-        return null;
+        return new SimpleBeingRunnable(this);
     }
 
     /**
@@ -44,17 +43,21 @@ public class RunnableThreadsMgr
     public void runSimulation() {
         // Call a method to create and start a thread for each being.
         // TODO -- you fill in here.
-        
+        beginBeingThreads();
 
         // Call a method that creates and starts a thread that's then
         //  used to wait for all the being threads to finish and
         //  return that thread to the caller.
         // TODO -- you fill in here.
-        
+        Thread waiter = createAndStartWaiterForBeingThreads();
 
         // Block until the waiter thread has finished.
         // TODO -- you fill in here.
-        
+        try {
+            waiter.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -75,11 +78,28 @@ public class RunnableThreadsMgr
         // (though they are free to do to if they choose).
         //
         // TODO -- you fill in here.
-        
+        mBeingThreads = new ArrayList<>();
+        /*getBeings()
+                .stream()
+                .map(Thread::new)
+                .map(
+                        (Thread i)->{
+                            i.setUncaughtExceptionHandler((t,e)->error(e));
+                            return null;
+                        }
+                    )
+                .collect(Collectors.toList());*/
+        for (Runnable runnable : getBeings()) {
+            Thread thr = new Thread(runnable);
+            thr.setUncaughtExceptionHandler((t, e) -> error(e));
+            mBeingThreads.add(thr);
+        }
+
 
         // Start all the threads in the List of Threads.
         // TODO -- you fill in here.
-        
+        mBeingThreads.forEach(Thread::start);
+
     }
 
     /**
@@ -96,15 +116,23 @@ public class RunnableThreadsMgr
         // the catch clause, which trigger the simulator to generate a
         // shutdownNow() request.
         // TODO -- you fill in here.
-        
+        Thread waiter = new Thread(() -> {
+            try {
+                for (Thread mBeingThread : mBeingThreads) {
+                    mBeingThread.join();
+                }
+            } catch (InterruptedException ex) {
+                error(ex);
+            }
+        });
 
         // Start running the thread.
         // TODO -- you fill in here.
-        
+        waiter.start();
 
         // Return the thread.
         // TODO -- you fill in here replacing this statement with your solution.
-        return null;
+        return waiter;
     }
 
     /**
